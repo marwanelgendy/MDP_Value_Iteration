@@ -21,13 +21,13 @@ public class Value_Iteration_Solver {
 
     private float [][] V ;
 
+    private float[][] oldV ;
+
     private int [][] policy ;
 
     private int [][] reward ;
 
-    private List<Float> Q ;
-
-    private int[][] possible_moves ;
+    private final int[][] possible_moves ;
 
     public Value_Iteration_Solver(int[][] reward) {
 
@@ -35,108 +35,124 @@ public class Value_Iteration_Solver {
 
         V = new float [ROWS][COLS] ;
 
+        oldV = new float[ROWS][COLS] ;
+
         policy = new int[ROWS][COLS] ;
 
         for(int[] i : policy)
             Arrays.fill(i,-1);
-
-        Q = new LinkedList<>();
 
         possible_moves = new int[][]{ { -1,0,1,0} , {0,1,0,-1}  };
     }
 
     public void solve (){
 
-        while (true)
-        {
+            do {
+                oldV = new float[V.length][V[0].length];
 
-            float[][] oldV = V.clone();
+                for ( int i = 0 ; i < V.length ; i++ )
+                    oldV[i] = V[i].clone();
 
-            int [][] oldPolicy = policy.clone();
-
-            float expected_val = 0f;
-
-            for (int i = 0 ; i < ROWS ; i++)
-            {
-                for (int j = 0 ; j < COLS ; j++)
+                for (int i = 0 ; i < ROWS ; i++)
                 {
-
-                    float max_v = Float.MIN_VALUE;
-
-                    int max_index = -1 ;
-
-                    if ( (i == 0 && j == 0) || (i == 0 && j == 2)){
-
-                        max_v = reward[i][j] ;
-
-                        max_index = 4 ;
+                    for (int j = 0 ; j < COLS ; j++)
+                    {
+                        max_node( i , j );
                     }
-
-                    else {
-
-                        for( int action = 0 ; action < MOVES ; action++){
-
-                            int selected_action_x = i + possible_moves[0][action] ;
-                            int selected_action_y = j + possible_moves[1][action] ;
-
-                            if( selected_action_x < MOVES && selected_action_x >= 0 && selected_action_y < MOVES && selected_action_y >= 0) //A collision with a wall results in no movement.
-                            {
-
-                                for (int k = 0 ; k < MOVES ; k++)
-                                {
-                                    int move_x = i + possible_moves[0][k] ;
-
-                                    int move_y = j + possible_moves[1][k] ;
-
-                                    if( move_x < ROWS && move_x >= 0 && move_y < COLS && move_y >= 0){ //A collision with a wall results in no movement.
-
-                                        if( !( Math.abs(selected_action_x -  move_x) == 2 || Math.abs(selected_action_y -  move_y) == 2 ) ){ // ignore the opposite direction for selected direction
-
-                                            if( selected_action_x == move_x && selected_action_y == move_y ){ // selected direction
-
-                                                expected_val += p1 * ( reward[i][j] + gamma * oldV[move_x][move_y] ) ;
-                                            }
-                                            else {
-
-                                                expected_val += p2 * ( reward[i][j] + gamma * oldV[move_x][move_y] ) ;
-                                            }
-
-                                        }
-
-                                    }
-                                }
-                            }
-
-                            if(max_v < expected_val) {
-
-                                max_v = expected_val;
-
-                                max_index = action;
-                            }
-                            expected_val = 0;
-
-                        }
-
-                    }
-
-                    V[i][j] = max_v ;
-                    policy[i][j] = max_index ;
                 }
-            }
+            }while ( ! check_convergence( V , oldV ) );
 
-            if (check_converge(policy , oldPolicy))  break;
-        }
+            print_array(policy , V);
 
-        print_array(policy , V);
     }
 
-    public boolean check_converge(int[][] arr1 , int[][] arr2){
+    private void max_node( int x , int y ){
+
+        float max_v = - Float.MAX_VALUE;
+
+        int max_index = -1 ;
+
+        float expected_val;
+
+        if ( x == 0 && ( y == 0 || y == 2)  ){
+
+            max_v = reward[x][y] ;
+
+            max_index = 4 ;
+        }
+
+        else {
+
+            for( int i = 0 ; i < MOVES ; i++){
+
+                int selected_action_x = x + possible_moves[0][i] ;
+
+                int selected_action_y = y + possible_moves[1][i] ;
+
+                if( selected_action_x < ROWS && selected_action_x >= 0 && selected_action_y < COLS && selected_action_y >= 0) //A collision with a wall results in no movement.
+                {
+                    expected_val = average_node( x , y , selected_action_x , selected_action_y );
+                }
+                else
+                    continue;
+
+                if(max_v < expected_val) {
+
+                    max_v = expected_val;
+
+                    max_index = i ;
+                }
+
+            }
+
+        }
+
+        V[x][y] = max_v ;
+        policy[x][y] = max_index ;
+
+
+    }
+
+
+    private float average_node( int x , int y , int selected_action_x , int selected_action_y ){
+
+        float expected_val = 0f ;
+
+        for (int i = 0 ; i < MOVES ; i++)
+        {
+            int move_x = x + possible_moves[0][i] ;
+
+            int move_y = y + possible_moves[1][i] ;
+
+            if( move_x < ROWS && move_x >= 0 && move_y < COLS && move_y >= 0){ //A collision with a wall results in no movement.
+
+                if( !( Math.abs(selected_action_x -  move_x) == 2 || Math.abs(selected_action_y -  move_y) == 2 ) ){ // ignore the opposite direction for selected direction
+
+                    if( selected_action_x == move_x && selected_action_y == move_y ){ // selected direction
+
+                        expected_val += p1 * ( reward[x][y] + gamma * oldV[move_x][move_y] ) ;
+                    }
+                    else {
+
+                        expected_val += p2 * ( reward[x][y] + gamma * oldV[move_x][move_y] ) ;
+                    }
+
+                }
+
+            }
+        }
+
+        return expected_val ;
+
+    }
+
+    private boolean check_convergence(float[][] arr1 , float[][] arr2){
 
         for (int i=0 ; i< ROWS ; i++)
         {
             for (int j = 0 ; j < COLS ; j++){
 
-                if (arr1[i][j] != arr2[i][j]) return false ;
+                if ( arr1[i][j] != arr2[i][j] ) return false ;
             }
         }
 
@@ -144,6 +160,10 @@ public class Value_Iteration_Solver {
     }
 
     private void print_array ( int[][] policy , float[][] V ){
+
+        System.out.println("r = " + reward[0][0]);
+
+        System.out.println("------");
 
         for (int i = 0 ; i < ROWS ; i++)
         {
@@ -160,17 +180,17 @@ public class Value_Iteration_Solver {
                 else if (policy[i][j] == 4) System.out.print("EXIT ");
             }
 
-            System.out.println("\n");
+            System.out.println("");
+        }
+
+        System.out.println("---------------------------------");
+
+        for (float[] floats : V) {
+            for (int j = 0; j < V[0].length; j++)
+                System.out.print(floats[j] + "   ");
+            System.out.println("");
         }
 
         System.out.println("\n");
-        System.out.println("|-----|-----|-----|");
-
-        for (int i = 0 ; i < 3 ; i++) {
-                System.out.println("|  " + V[i][0] + "  |  " + V[i][1] + "  |  " + V[i][2] + "  |");
-                System.out.println("|-----|-----|-----|");
-        }
-
-            System.out.println("\n");
     }
 }
