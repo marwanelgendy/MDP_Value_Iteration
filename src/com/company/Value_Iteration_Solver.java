@@ -135,6 +135,23 @@ public class Value_Iteration_Solver {
                 }
 
             }
+            
+            else{
+
+                if( !( Math.abs(selected_action_x -  move_x) == 2 || Math.abs(selected_action_y -  move_y) == 2 ) ){ // ignore the opposite direction for selected direction
+
+                    if( selected_action_x == move_x && selected_action_y == move_y ){ // selected direction
+
+                        expected_val += p1 * ( reward[x][y] + gamma * oldV[x][y] ) ;
+                    }
+                    else {
+
+                        expected_val += p2 * ( reward[x][y] + gamma * oldV[x][y] ) ;
+                    }
+
+                }
+
+            }
         }
 
         return expected_val ;
