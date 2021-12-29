@@ -89,12 +89,7 @@ public class Value_Iteration_Solver {
 
                 int selected_action_y = y + possible_moves[1][i] ;
 
-                if( selected_action_x < ROWS && selected_action_x >= 0 && selected_action_y < COLS && selected_action_y >= 0) //A collision with a wall results in no movement.
-                {
-                    expected_val = average_node( x , y , selected_action_x , selected_action_y );
-                }
-                else
-                    continue;
+                expected_val = average_node( x , y , selected_action_x , selected_action_y );  
 
                 if(max_v < expected_val) {
 
